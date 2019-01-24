@@ -131,7 +131,7 @@ def run():
     from keras_cifar10 import KerasCifar10
     import time
 
-    c = KerasCifar10(learning_rate=0.01)
+    c = KerasCifar10(learning_rate=0.01, batch_size=2)
     start = time.time()
     history1, test_loss1, test_acc1 = c.execute_model(problem_1)
     end1 = time.time() - start

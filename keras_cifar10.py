@@ -54,8 +54,10 @@ class KerasCifar10:
         model.summary()
 
         # Compile model
+        # optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
         model.compile(loss=keras.losses.categorical_crossentropy,
-                      optimizer=tf.train.AdamOptimizer(learning_rate=self.learning_rate),
+                      optimizer=optimizer,
                       metrics=['accuracy'])
 
         # Train model
