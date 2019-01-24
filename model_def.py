@@ -51,7 +51,7 @@ def build_model(input_layer_shape, qn2=False, qn3=False):
     model.add(conv_2d(512))
     model.add(conv_2d(512))
 
-    model.add(keras.layers.Flatten().add_weight)
+    model.add(keras.layers.Flatten())
 
     # Dense Layers
     model.add(keras.layers.Dense(200, activation=tf.nn.relu))
@@ -124,21 +124,31 @@ def plot_loss(epochs, history1, history2, history3):
 
 def run():
     from keras_cifar10 import KerasCifar10
+    import time
 
-    c = KerasCifar10()
+    c = KerasCifar10(batch_size=2)
+    start = time.time()
     history1, test_loss1, test_acc1 = c.execute_model(problem_1)
-    history2, test_loss2, test_acc2 = c.execute_model(problem_2)
-    history3, test_loss3, test_acc3 = c.execute_model(problem_3)
+    end1 = time.time() - start
 
-    print("Q1: Test Acc: {}. Test Loss: {}".format(test_acc1, test_loss1))
-    print("Q2: Test Acc: {}. Test Loss: {}".format(test_acc2, test_loss2))
-    print("Q3: Test Acc: {}. Test Loss: {}".format(test_acc3, test_loss3))
+    start = time.time()
+    history2, test_loss2, test_acc2 = c.execute_model(problem_2)
+    end2 = time.time() - start
+
+    start = time.time()
+    history3, test_loss3, test_acc3 = c.execute_model(problem_3)
+    end3 = time.time() - start
+
+    print("Q1:\n\tTest Acc: {}. Test Loss: {}. Elapsed: {}min".format(test_acc1, test_loss1, end1 / 60))
+    print("Q2:\n\tTest Acc: {}. Test Loss: {}. Elapsed: {}min".format(test_acc2, test_loss2, end2 / 60))
+    print("Q3:\n\tTest Acc: {}. Test Loss: {}. Elapsed: {}min".format(test_acc3, test_loss3, end3 / 60))
 
     plot_loss(c.epochs, history1, history2, history3)
 
 
 if __name__ == "__main__":
     run()
+
     # from keras.applications import vgg16
     #
     # # Load the VGG model

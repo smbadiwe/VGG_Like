@@ -17,7 +17,7 @@ class KerasLogger(keras.callbacks.Callback):
 
 class KerasCifar10:
 
-    def __init__(self, learning_rate=0.001, validation_split=0.2, batch_size=32, epochs=10,
+    def __init__(self, learning_rate=0.001, validation_split=0.2, batch_size=32, epochs=50,
                  log_dir=None):
         self.learning_rate = learning_rate
         self.validation_split = validation_split
