@@ -51,7 +51,7 @@ def build_model(input_layer_shape, qn2=False, qn3=False):
     model.add(conv_2d(512))
     model.add(conv_2d(512))
 
-    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Flatten().add_weight)
 
     # Dense Layers
     model.add(keras.layers.Dense(200, activation=tf.nn.relu))
@@ -133,9 +133,18 @@ def run():
     print("Q1: Test Acc: {}. Test Loss: {}".format(test_acc1, test_loss1))
     print("Q2: Test Acc: {}. Test Loss: {}".format(test_acc2, test_loss2))
     print("Q3: Test Acc: {}. Test Loss: {}".format(test_acc3, test_loss3))
-    
+
     plot_loss(c.epochs, history1, history2, history3)
 
 
 if __name__ == "__main__":
     run()
+    # from keras.applications import vgg16
+    #
+    # # Load the VGG model
+    # vgg_model = vgg16.VGG16(weights=None, input_shape=(32, 32, 3))
+    # print(vgg_model.summary())
+    # # for l in vgg_model.layers:
+    # #     print(l.name)
+    # print()
+    # print(len(vgg_model.layers))

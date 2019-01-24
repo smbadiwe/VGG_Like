@@ -22,7 +22,7 @@ class KerasCifar10:
         self.learning_rate = learning_rate
         self.validation_split = validation_split
         self.batch_size = batch_size
-        self.epochs = epochs,
+        self.epochs = epochs
         self.log_dir = log_dir
 
     def get_data(self):
