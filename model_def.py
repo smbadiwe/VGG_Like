@@ -6,17 +6,22 @@ import numpy as np
 
 def conv_2d(filters, input_layer_shape=None, name=None):
     if input_layer_shape:
-        return keras.layers.Conv2D(filters, kernel_size=(3, 3), strides=(1, 1),
+        return keras.layers.Conv2D(filters, kernel_size=(3, 3), strides=(1, 1), bias_initializer=keras.initializers.Constant(0.1),
                                    activation=tf.nn.relu, input_shape=input_layer_shape,
                                    padding="same", name=name)
 
     return keras.layers.Conv2D(filters, kernel_size=(3, 3), strides=(1, 1),
-                               activation=tf.nn.relu,
+                               activation=tf.nn.relu, bias_initializer=keras.initializers.Constant(0.1),
                                padding="same", name=name)
 
 
 def pooling(name=None):
     return keras.layers.MaxPooling2D(pool_size=(3, 3), strides=(1, 1), name=name)
+
+
+def fc(units, name=None):
+    return keras.layers.Dense(units, activation=tf.nn.relu, bias_initializer=keras.initializers.Constant(0.1),
+                              name=name)
 
 
 def build_model(input_layer_shape, qn2=False, qn3=False):
@@ -54,8 +59,8 @@ def build_model(input_layer_shape, qn2=False, qn3=False):
     model.add(keras.layers.Flatten())
 
     # Dense Layers
-    model.add(keras.layers.Dense(200, activation=tf.nn.relu))
-    model.add(keras.layers.Dense(100, activation=tf.nn.relu))
+    model.add(fc(200))
+    model.add(fc(100))
     model.add(keras.layers.Dense(10, activation=tf.nn.softmax, name="Softmax"))
 
     return model
@@ -126,7 +131,7 @@ def run():
     from keras_cifar10 import KerasCifar10
     import time
 
-    c = KerasCifar10(batch_size=2)
+    c = KerasCifar10(learning_rate=0.01)
     start = time.time()
     history1, test_loss1, test_acc1 = c.execute_model(problem_1)
     end1 = time.time() - start
