@@ -36,7 +36,7 @@ tf.app.flags.DEFINE_integer('log_frequency', 10,
                             """How often to log results to the console.""")
 
 
-def train():
+def train(model_fn, train_folder):
     """Train CIFAR-10 for a number of steps."""
     with tf.Graph().as_default():
         global_step = tf.train.get_or_create_global_step()
@@ -49,7 +49,7 @@ def train():
 
         # Build a Graph that computes the logits predictions from the
         # inference model.
-        logits = cifar10.model_q1(images)
+        logits = model_fn(images)
 
         # Calculate loss.
         loss = cifar10.loss(logits, labels)
@@ -85,7 +85,7 @@ def train():
                                         examples_per_sec, sec_per_batch))
 
         with tf.train.MonitoredTrainingSession(
-                checkpoint_dir=FLAGS.train_dir,
+                checkpoint_dir=train_folder,
                 hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
                        tf.train.NanTensorHook(loss),
                        _LoggerHook()],
@@ -95,12 +95,21 @@ def train():
                 mon_sess.run(train_op)
 
 
-def main(argv=None):  # pylint: disable=unused-argument
+def run_training(model_fn, qn_id):
     cifar10.maybe_download_and_extract()
-    if tf.gfile.Exists(FLAGS.train_dir):
-        tf.gfile.DeleteRecursively(FLAGS.train_dir)
-    tf.gfile.MakeDirs(FLAGS.train_dir)
-    train()
+    train_folder = FLAGS.train_dir + "_" + qn_id
+    if tf.gfile.Exists(train_folder):
+        tf.gfile.DeleteRecursively(train_folder)
+    tf.gfile.MakeDirs(train_folder)
+    train(model_fn, train_folder)
+    print("Done running training for " + qn_id + "\n===================================\n")
+    time.sleep(15)
+
+
+def main(argv=None):  # pylint: disable=unused-argument
+    run_training(cifar10.model_q1, "q1")
+    run_training(cifar10.model_q2, "q2")
+    run_training(cifar10.model_q3, "q3")
 
 
 if __name__ == '__main__':

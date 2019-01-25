@@ -3,3 +3,4 @@ venv
 .idea
 *.pdf
 __pycache__
+*.py_*

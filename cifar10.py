@@ -44,8 +44,8 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = cifar10_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-INITIAL_LEARNING_RATE = 0.1  # Initial learning rate.
+LEARNING_RATE_DECAY_FACTOR = 0.005  # Learning rate decay factor.
+INITIAL_LEARNING_RATE = 0.01  # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
 # to differentiate the operations. Note that this prefix is removed from the
@@ -181,10 +181,8 @@ def pooling(input_tensor, name=None):
 
 def fc(input_tensor, units, name=None, run_relu=True):
     with tf.variable_scope(name) as scope:
-        print(scope.name, end="\t")
         input_size = input_tensor.shape[1].value
 
-        print("\t{} [{}]".format(input_tensor.shape, input_size), end="\t")
         if run_relu:
             weights = _variable_with_weight_decay('weights', shape=[input_size, units],
                                                   stddev=0.04, wd=0.004)
@@ -196,7 +194,8 @@ def fc(input_tensor, units, name=None, run_relu=True):
             biases = _variable_on_cpu('biases', [units], tf.constant_initializer(0.0))
             local4 = tf.add(tf.matmul(input_tensor, weights, transpose_a=False), biases, name=scope.name)
         _activation_summary(local4)
-        print("\t{}".format(local4.shape))
+
+        print("{}\t\t{}\t\t\t{}".format(scope.name, input_tensor.shape, local4.shape))
         return local4
 
 
@@ -216,9 +215,8 @@ def inference(images, qn2=False, qn3=False):
     """Build the CIFAR-10 model.
     Args:
       images: Images returned from distorted_inputs() or inputs().
-      :param images: Images returned from distorted_inputs() or inputs().
-      :param qn2:
-      :param qn3:
+      qn2: True iff we're running qn 2 model
+      qn3: True iff we're running qn 3 model
     Returns:
       Logits.
     """
@@ -226,7 +224,7 @@ def inference(images, qn2=False, qn3=False):
     # tf.Variable() in order to share variables across multiple GPU training runs.
     # If we only ran this model on a single GPU, we could simplify this function
     # by replacing all instances of tf.get_variable() with tf.Variable().
-    print("Layer Name\tShape In\tShape Out\n----------------------------------------------")
+    print("Layer Name\t\tShape In\t\t\tShape Out\n-------------------------------------------------------------------")
     # level 1
     with tf.variable_scope("level1"):
         conv11 = conv_2d(images, 64, "conv1")

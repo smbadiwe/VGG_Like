@@ -40,16 +40,17 @@ tf.app.flags.DEFINE_boolean('run_once', False,
                             """Whether to run eval only once.""")
 
 
-def eval_once(saver, summary_writer, top_k_op, summary_op):
+def eval_once(saver, summary_writer, top_k_op, summary_op, checkpoint_folder):
     """Run Eval once.
     Args:
       saver: Saver.
       summary_writer: Summary writer.
       top_k_op: Top K op.
       summary_op: Summary op.
+      checkpoint_folder: where checkpoints were saved during training.
     """
     with tf.Session() as sess:
-        ckpt = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+        ckpt = tf.train.get_checkpoint_state(checkpoint_folder)
         if ckpt and ckpt.model_checkpoint_path:
             # Restores from checkpoint
             saver.restore(sess, ckpt.model_checkpoint_path)
@@ -93,7 +94,7 @@ def eval_once(saver, summary_writer, top_k_op, summary_op):
         coord.join(threads, stop_grace_period_secs=10)
 
 
-def evaluate():
+def evaluate(model_fn, eval_folder, checkpoint_folder):
     """Eval CIFAR-10 for a number of steps."""
     with tf.Graph().as_default() as g:
         # Get images and labels for CIFAR-10.
@@ -102,7 +103,7 @@ def evaluate():
 
         # Build a Graph that computes the logits predictions from the
         # inference model.
-        logits = cifar10.inference(images)
+        logits = model_fn(images)
 
         # Calculate predictions.
         top_k_op = tf.nn.in_top_k(logits, labels, 1)
@@ -116,21 +117,30 @@ def evaluate():
         # Build the summary operation based on the TF collection of Summaries.
         summary_op = tf.summary.merge_all()
 
-        summary_writer = tf.summary.FileWriter(FLAGS.eval_dir, g)
+        summary_writer = tf.summary.FileWriter(eval_folder, g)
 
         while True:
-            eval_once(saver, summary_writer, top_k_op, summary_op)
+            eval_once(saver, summary_writer, top_k_op, summary_op, checkpoint_folder)
             if FLAGS.run_once:
                 break
             time.sleep(FLAGS.eval_interval_secs)
 
 
-def main(argv=None):  # pylint: disable=unused-argument
+def run_evaluation(model_fn, qn_id):
     cifar10.maybe_download_and_extract()
-    if tf.gfile.Exists(FLAGS.eval_dir):
-        tf.gfile.DeleteRecursively(FLAGS.eval_dir)
-    tf.gfile.MakeDirs(FLAGS.eval_dir)
-    evaluate()
+    eval_folder = FLAGS.eval_dir + "_" + qn_id
+    if tf.gfile.Exists(eval_folder):
+        tf.gfile.DeleteRecursively(eval_folder)
+    tf.gfile.MakeDirs(eval_folder)
+    evaluate(model_fn, eval_folder, FLAGS.checkpoint_dir + "_" + qn_id)
+    print("Done running evaluation for " + qn_id + "\n===================================\n")
+    time.sleep(15)
+
+
+def main(argv=None):  # pylint: disable=unused-argument
+    run_evaluation(cifar10.model_q1, "q1")
+    run_evaluation(cifar10.model_q2, "q2")
+    run_evaluation(cifar10.model_q3, "q3")
 
 
 if __name__ == '__main__':

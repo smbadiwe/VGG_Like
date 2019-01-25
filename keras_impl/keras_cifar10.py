@@ -44,7 +44,8 @@ class KerasCifar10:
 
     def execute_model(self, get_model):
         # Get data
-        (train_data, train_labels), (eval_data, eval_labels) = self.get_data()
+        with tf.device('/cpu:0'):
+            (train_data, train_labels), (eval_data, eval_labels) = self.get_data()
         # one-hot encoding for the labels
         train_labels = keras.utils.to_categorical(train_labels)
         eval_labels = keras.utils.to_categorical(eval_labels)
