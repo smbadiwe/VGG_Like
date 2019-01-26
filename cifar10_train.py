@@ -28,7 +28,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/.tensorflow/cifar10_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 40000,
+tf.app.flags.DEFINE_integer('max_steps', 60000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
@@ -105,11 +105,7 @@ def train(model_fn, train_folder):
                 else:
                     print('No checkpoint file found')
                     return
-                # # Restore the moving average version of the learned variables for eval.
-                # variable_averages = tf.train.ExponentialMovingAverage(
-                #     cifar10.MOVING_AVERAGE_DECAY)
-                # variables_to_restore = variable_averages.variables_to_restore()
-                # saver = tf.train.Saver(train_op)
+
                 mon_sess.run(train_op)
 
 
