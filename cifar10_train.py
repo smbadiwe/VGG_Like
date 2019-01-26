@@ -39,8 +39,6 @@ tf.app.flags.DEFINE_integer('log_frequency', 10,
 def train(model_fn, train_folder):
     """Train CIFAR-10 for a number of steps."""
     with tf.Graph().as_default():
-        global_step = tf.train.get_or_create_global_step()
-
         # Get images and labels for CIFAR-10.
         # Force input pipeline to CPU:0 to avoid operations sometimes ending up on
         # GPU and resulting in a slow down.
@@ -56,14 +54,17 @@ def train(model_fn, train_folder):
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
+        global_step = tf.train.get_or_create_global_step()
         train_op = cifar10.train(loss, global_step)
 
         class _LoggerHook(tf.train.SessionRunHook):
             """Logs loss and runtime."""
 
             def begin(self):
-                self._step = -1
                 self._start_time = time.time()
+
+            def after_create_session(self, session, coord):
+                self._step = session.run(global_step)
 
             def before_run(self, run_context):
                 self._step += 1
@@ -84,6 +85,7 @@ def train(model_fn, train_folder):
                     print(format_str % (datetime.now(), self._step, loss_value,
                                         examples_per_sec, sec_per_batch))
 
+        saver = tf.train.Saver(tf.global_variables())
         with tf.train.MonitoredTrainingSession(
                 checkpoint_dir=train_folder,
                 hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
@@ -92,15 +94,31 @@ def train(model_fn, train_folder):
                 config=tf.ConfigProto(
                     log_device_placement=FLAGS.log_device_placement)) as mon_sess:
             while not mon_sess.should_stop():
+                latest_checkpoint_path = tf.train.latest_checkpoint(train_folder)
+                if latest_checkpoint_path:
+                    # Restores from checkpoint
+                    saver.restore(mon_sess, latest_checkpoint_path)
+                    # # Assuming model_checkpoint_path looks something like:
+                    # #   /my-favorite-path/cifar10_train/model.ckpt-0,
+                    # # extract global_step from it.
+                    # global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
+                else:
+                    print('No checkpoint file found')
+                    return
+                # # Restore the moving average version of the learned variables for eval.
+                # variable_averages = tf.train.ExponentialMovingAverage(
+                #     cifar10.MOVING_AVERAGE_DECAY)
+                # variables_to_restore = variable_averages.variables_to_restore()
+                # saver = tf.train.Saver(train_op)
                 mon_sess.run(train_op)
 
 
 def run_training(model_fn, qn_id):
     cifar10.maybe_download_and_extract()
     train_folder = FLAGS.train_dir + "_" + qn_id
-    if tf.gfile.Exists(train_folder):
-        tf.gfile.DeleteRecursively(train_folder)
-    tf.gfile.MakeDirs(train_folder)
+    # if tf.gfile.Exists(train_folder):
+    #     tf.gfile.DeleteRecursively(train_folder)
+    # tf.gfile.MakeDirs(train_folder)
     train(model_fn, train_folder)
     print("Done running training for " + qn_id + "\n===================================\n")
     time.sleep(15)
