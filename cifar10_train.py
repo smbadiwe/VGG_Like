@@ -28,7 +28,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '/.tensorflow/cifar10_train',
                            """Directory where to write event logs """
                            """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 60000,
+tf.app.flags.DEFINE_integer('max_steps', 45000,
                             """Number of batches to run.""")
 tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
@@ -36,7 +36,7 @@ tf.app.flags.DEFINE_integer('log_frequency', 10,
                             """How often to log results to the console.""")
 
 
-def train(model_fn, train_folder):
+def train(model_fn, train_folder, qn_id):
     """Train CIFAR-10 for a number of steps."""
     with tf.Graph().as_default():
         # Get images and labels for CIFAR-10.
@@ -80,31 +80,38 @@ def train(model_fn, train_folder):
                     examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
                     sec_per_batch = float(duration / FLAGS.log_frequency)
 
-                    format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                    format_str = ('%s - %s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
                                   'sec/batch)')
-                    print(format_str % (datetime.now(), self._step, loss_value,
+                    print(format_str % (qn_id, datetime.now(), self._step, loss_value,
                                         examples_per_sec, sec_per_batch))
+
+        class _StopAtHook(tf.train.SessionRunHook):
+            def __init__(self, last_step):
+                self._last_step = last_step
+
+            def after_create_session(self, session, coord):
+                self._step = session.run(global_step)
+
+            def before_run(self, run_context):  # pylint: disable=unused-argument
+                self._step += 1
+                return tf.train.SessionRunArgs(global_step)
+
+            def after_run(self, run_context, run_values):
+                if self._step >= self._last_step:
+                    run_context.request_stop()
 
         saver = tf.train.Saver(tf.global_variables())
         with tf.train.MonitoredTrainingSession(
                 checkpoint_dir=train_folder,
-                hooks=[tf.train.StopAtStepHook(last_step=FLAGS.max_steps),
-                       tf.train.NanTensorHook(loss),
-                       _LoggerHook()],
+                hooks=[_StopAtHook(last_step=FLAGS.max_steps),
+                       tf.train.NanTensorHook(loss), _LoggerHook()],
                 config=tf.ConfigProto(
                     log_device_placement=FLAGS.log_device_placement)) as mon_sess:
             while not mon_sess.should_stop():
                 latest_checkpoint_path = tf.train.latest_checkpoint(train_folder)
                 if latest_checkpoint_path:
-                    # Restores from checkpoint
+                    # Restore from checkpoint
                     saver.restore(mon_sess, latest_checkpoint_path)
-                    # # Assuming model_checkpoint_path looks something like:
-                    # #   /my-favorite-path/cifar10_train/model.ckpt-0,
-                    # # extract global_step from it.
-                    # global_step = ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
-                else:
-                    print('No checkpoint file found')
-                    return
 
                 mon_sess.run(train_op)
 
@@ -115,7 +122,7 @@ def run_training(model_fn, qn_id):
     # if tf.gfile.Exists(train_folder):
     #     tf.gfile.DeleteRecursively(train_folder)
     # tf.gfile.MakeDirs(train_folder)
-    train(model_fn, train_folder)
+    train(model_fn, train_folder, qn_id)
     print("Done running training for " + qn_id + "\n===================================\n")
     time.sleep(15)
 
