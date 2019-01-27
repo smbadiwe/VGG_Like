@@ -90,7 +90,7 @@ class KerasCifar10:
                             callbacks=callbacks)
 
         # Test model
-        test_loss, test_acc = model.evaluate(eval_data, eval_labels, verbose=1, checkpoint_path=checkpoint_folder)
+        test_loss, test_acc = model.evaluate(eval_data, eval_labels, verbose=1)
 
         print("test_lost: {}. test_acc: {}".format(test_loss, test_acc))
 
