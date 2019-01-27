@@ -49,8 +49,8 @@ class KerasCifar10:
             # one-hot encoding for the labels
             train_labels = keras.utils.to_categorical(train_labels)
             eval_labels = keras.utils.to_categorical(eval_labels)
-            train_data /= 255
-            eval_data /= 255
+            # train_data /= 255
+            # eval_data /= 255
 
         # Build model
         model = get_model(train_data[0].shape)
@@ -59,7 +59,7 @@ class KerasCifar10:
         # Compile model
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         # optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
-        model.compile(loss=keras.losses.categorical_crossentropy,
+        model.compile(loss=keras.losses.sparse_categorical_crossentropy,
                       optimizer=optimizer,
                       metrics=['accuracy'])
 
@@ -92,7 +92,7 @@ class KerasCifar10:
         # Test model
         test_loss, test_acc = model.evaluate(eval_data, eval_labels, verbose=1)
 
-        print("test_lost: {}. test_acc: {}".format(test_loss, test_acc))
+        print("test_loss: {}. test_acc: {}".format(test_loss, test_acc))
 
         # clear memory
         keras.backend.clear_session()
