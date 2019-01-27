@@ -85,24 +85,41 @@ def train(model_fn, train_folder, qn_id):
                     print(format_str % (qn_id, datetime.now(), self._step, loss_value,
                                         examples_per_sec, sec_per_batch))
 
-        class _StopAtHook(tf.train.SessionRunHook):
+        # class _StopAtHook(tf.train.SessionRunHook):
+        #     def __init__(self, last_step):
+        #         self._last_step = last_step
+        #
+        #     def after_create_session(self, session, coord):
+        #         self._step = session.run(global_step)
+        #
+        #     def before_run(self, run_context):  # pylint: disable=unused-argument
+        #         self._step += 1
+        #         return tf.train.SessionRunArgs(global_step)
+        #
+        #     def after_run(self, run_context, run_values):
+        #         if self._step >= self._last_step:
+        #             run_context.request_stop()
+        class _StopAtHook(tf.train.StopAtStepHook):
             def __init__(self, last_step):
-                self._last_step = last_step
-
-            def after_create_session(self, session, coord):
-                self._step = session.run(global_step)
-
-            def before_run(self, run_context):  # pylint: disable=unused-argument
-                self._step += 1
-                return tf.train.SessionRunArgs(global_step)
+                super().__init__(last_step=last_step)
 
             def after_run(self, run_context, run_values):
-                if self._step >= self._last_step:
-                    run_context.request_stop()
+                gs = run_values.results + 1
+                print("\tgs = {}/{}".format(gs, self._last_step))
+                if gs >= self._last_step:
+                    # Check latest global step to ensure that the targeted last step is
+                    # reached. global_step read tensor is the value of global step
+                    # before running the operation. We're not sure whether current session.run
+                    # incremented the global_step or not. Here we're checking it.
 
-        saver = tf.train.Saver(tf.global_variables())
+                    step = run_context.session.run(self._global_step_tensor)
+                    print("\t\tstep: {}. gs = {}/{}".format(step, gs, self._last_step))
+                    if step >= self._last_step:
+                        run_context.request_stop()
+
+        saver = tf.train.Saver()
         with tf.train.MonitoredTrainingSession(
-                checkpoint_dir=train_folder,
+                checkpoint_dir=train_folder, save_checkpoint_steps=100,
                 hooks=[_StopAtHook(last_step=FLAGS.max_steps),
                        tf.train.NanTensorHook(loss), _LoggerHook()],
                 config=tf.ConfigProto(
@@ -111,6 +128,7 @@ def train(model_fn, train_folder, qn_id):
                 latest_checkpoint_path = tf.train.latest_checkpoint(train_folder)
                 if latest_checkpoint_path:
                     # Restore from checkpoint
+                    print("Restoring checkpoint from %s" % latest_checkpoint_path)
                     saver.restore(mon_sess, latest_checkpoint_path)
 
                 mon_sess.run(train_op)
