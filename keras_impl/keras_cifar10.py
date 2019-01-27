@@ -49,17 +49,17 @@ class KerasCifar10:
             # one-hot encoding for the labels
             train_labels = keras.utils.to_categorical(train_labels)
             eval_labels = keras.utils.to_categorical(eval_labels)
-            # train_data /= 255
-            # eval_data /= 255
+            train_data /= 255
+            eval_data /= 255
 
         # Build model
         model = get_model(train_data[0].shape)
         model.summary()
 
         # Compile model
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
         # optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
-        model.compile(loss=keras.losses.sparse_categorical_crossentropy,
+        model.compile(loss=keras.losses.categorical_crossentropy,
                       optimizer=optimizer,
                       metrics=['accuracy'])
 
