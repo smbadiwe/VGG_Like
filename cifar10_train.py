@@ -18,7 +18,6 @@ from __future__ import print_function
 
 from datetime import datetime
 import time
-
 import tensorflow as tf
 
 import cifar10
@@ -52,10 +51,13 @@ def train(model_fn, train_folder, qn_id):
         # Calculate loss.
         loss = cifar10.loss(logits, labels)
 
+        # Calculate accuracy
+        model_accuracy = cifar10.accuracy(logits, labels)
+
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
         global_step = tf.train.get_or_create_global_step()
-        train_op = cifar10.train(loss, global_step)
+        train_op = cifar10.train(loss, model_accuracy, global_step)
 
         class _LoggerHook(tf.train.SessionRunHook):
             """Logs loss and runtime."""
@@ -68,7 +70,7 @@ def train(model_fn, train_folder, qn_id):
 
             def before_run(self, run_context):
                 self._step += 1
-                return tf.train.SessionRunArgs(loss)  # Asks for loss value.
+                return tf.train.SessionRunArgs([loss, model_accuracy])  # Asks for loss value.
 
             def after_run(self, run_context, run_values):
                 if self._step % FLAGS.log_frequency == 0:
@@ -76,67 +78,71 @@ def train(model_fn, train_folder, qn_id):
                     duration = current_time - self._start_time
                     self._start_time = current_time
 
-                    loss_value = run_values.results
+                    loss_value = run_values.results[0]
+                    acc_value = run_values.results[1]
                     examples_per_sec = FLAGS.log_frequency * FLAGS.batch_size / duration
                     sec_per_batch = float(duration / FLAGS.log_frequency)
 
-                    format_str = ('%s - %s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                    format_str = ('%s - %s: step %d, loss = %.2f, acc = %.2f (%.1f examples/sec; %.3f '
                                   'sec/batch)')
-                    print(format_str % (qn_id, datetime.now(), self._step, loss_value,
+                    print(format_str % (qn_id, datetime.now(), self._step, loss_value, acc_value,
                                         examples_per_sec, sec_per_batch))
 
-        # class _StopAtHook(tf.train.SessionRunHook):
-        #     def __init__(self, last_step):
-        #         self._last_step = last_step
-        #
-        #     def after_create_session(self, session, coord):
-        #         self._step = session.run(global_step)
-        #
-        #     def before_run(self, run_context):  # pylint: disable=unused-argument
-        #         self._step += 1
-        #         return tf.train.SessionRunArgs(global_step)
-        #
-        #     def after_run(self, run_context, run_values):
-        #         if self._step >= self._last_step:
-        #             run_context.request_stop()
-        class _StopAtHook(tf.train.StopAtStepHook):
+        class _StopAtHook(tf.train.SessionRunHook):
             def __init__(self, last_step):
-                super().__init__(last_step=last_step)
+                self._last_step = last_step
 
-            def begin(self):
-                self._global_step_tensor = global_step
+            def after_create_session(self, session, coord):
+                self._step = session.run(global_step)
 
             def before_run(self, run_context):  # pylint: disable=unused-argument
+                self._step += 1
                 return tf.train.SessionRunArgs(global_step)
 
             def after_run(self, run_context, run_values):
-                gs = run_values.results + 1
-                print("\tgs = {}/{}".format(gs, self._last_step))
-                if gs >= self._last_step:
-                    # Check latest global step to ensure that the targeted last step is
-                    # reached. global_step read tensor is the value of global step
-                    # before running the operation. We're not sure whether current session.run
-                    # incremented the global_step or not. Here we're checking it.
-
-                    step = run_context.session.run(self._global_step_tensor)
-                    print("\t\tstep: {}. gs = {}/{}".format(step, gs, self._last_step))
-                    if step >= self._last_step:
-                        run_context.request_stop()
+                # if self._step % 100 == 0:
+                #     accuracy = run_context.session.run(accuracy_op)
+                #     tf.summary.scalar("accuracy", accuracy)
+                if self._step >= self._last_step:
+                    run_context.request_stop()
+        # class _StopAtHook(tf.train.StopAtStepHook):
+        #     def __init__(self, last_step):
+        #         super().__init__(last_step=last_step)
+        #
+        #     def begin(self):
+        #         self._global_step_tensor = global_step
+        #
+        #     def before_run(self, run_context):  # pylint: disable=unused-argument
+        #         return tf.train.SessionRunArgs(global_step)
+        #
+        #     def after_run(self, run_context, run_values):
+        #         gs = run_values.results + 1
+        #         print("\tgs = {}/{}".format(gs, self._last_step))
+        #         if gs >= self._last_step:
+        #             # Check latest global step to ensure that the targeted last step is
+        #             # reached. global_step read tensor is the value of global step
+        #             # before running the operation. We're not sure whether current session.run
+        #             # incremented the global_step or not. Here we're checking it.
+        #
+        #             step = run_context.session.run(self._global_step_tensor)
+        #             print("\t\tstep: {}. gs = {}/{}".format(step, gs, self._last_step))
+        #             if step >= self._last_step:
+        #                 run_context.request_stop()
 
         saver = tf.train.Saver()
         with tf.train.MonitoredTrainingSession(
-                checkpoint_dir=train_folder, save_checkpoint_steps=100,
+                checkpoint_dir=train_folder,
                 hooks=[_StopAtHook(last_step=FLAGS.max_steps),
                        tf.train.NanTensorHook(loss), _LoggerHook()],
                 config=tf.ConfigProto(
                     log_device_placement=FLAGS.log_device_placement)) as mon_sess:
-            while not mon_sess.should_stop():
-                latest_checkpoint_path = tf.train.latest_checkpoint(train_folder)
-                if latest_checkpoint_path:
-                    # Restore from checkpoint
-                    print("Restoring checkpoint from %s" % latest_checkpoint_path)
-                    saver.restore(mon_sess, latest_checkpoint_path)
+            latest_checkpoint_path = tf.train.latest_checkpoint(train_folder)
+            if latest_checkpoint_path is not None:
+                # Restore from checkpoint
+                print("Restoring checkpoint from %s" % latest_checkpoint_path)
+                saver.restore(mon_sess, latest_checkpoint_path)
 
+            while not mon_sess.should_stop():
                 mon_sess.run(train_op)
 
 

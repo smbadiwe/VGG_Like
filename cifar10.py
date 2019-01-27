@@ -44,7 +44,7 @@ NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = cifar10_input.NUM_EXAMPLES_PER_EPOCH_FOR_EVAL
 # Constants describing the training process.
 MOVING_AVERAGE_DECAY = 0.9999  # The decay to use for the moving average.
 NUM_EPOCHS_PER_DECAY = 350.0  # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.005  # Learning rate decay factor.
+LEARNING_RATE_DECAY_FACTOR = 0.001  # Learning rate decay factor.
 INITIAL_LEARNING_RATE = 0.01  # Initial learning rate.
 
 # If a model is trained with multiple GPUs, prefix all Op names with tower_name
@@ -267,6 +267,13 @@ def inference(images, qn2=False, qn3=False):
         return logits
 
 
+def accuracy(logits, labels):
+    lg = tf.argmax(logits, 1)
+    print("accuracy - Shapes: logits: {}. labels: {}.".format(lg.shape, labels.shape))
+    acc, acc_op = tf.metrics.accuracy(predictions=lg, labels=labels)
+    return acc_op
+
+
 def loss(logits, labels):
     """Add L2Loss to all the trainable variables.
     Add summary for "Loss" and "Loss/avg".
@@ -278,6 +285,7 @@ def loss(logits, labels):
       Loss tensor of type float.
     """
     # Calculate the average cross entropy loss across the batch.
+    print("loss - Shapes: logits: {}. labels: {}.".format(logits.shape, labels.shape))
     labels = tf.cast(labels, tf.int64)
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
         labels=labels, logits=logits, name='cross_entropy_per_example')
@@ -314,12 +322,13 @@ def _add_loss_summaries(total_loss):
     return loss_averages_op
 
 
-def train(total_loss, global_step):
+def train(total_loss, model_accuracy, global_step):
     """Train CIFAR-10 model.
     Create an optimizer and apply to all trainable variables. Add moving
     average for all trainable variables.
     Args:
       total_loss: Total loss from loss().
+      model_accuracy: Model accuracy
       global_step: Integer Variable counting the number of training steps
         processed.
     Returns:
@@ -339,6 +348,9 @@ def train(total_loss, global_step):
 
     # Generate moving averages of all losses and associated summaries.
     loss_averages_op = _add_loss_summaries(total_loss)
+
+    # Accuracy
+    tf.summary.scalar("accuracy", model_accuracy)
 
     # Compute gradients.
     with tf.control_dependencies([loss_averages_op]):

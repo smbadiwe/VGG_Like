@@ -30,39 +30,43 @@ class KerasCifar10:
         print("Load training and eval data")
         (train_data, train_labels), (test_data, test_labels) = keras.datasets.cifar10.load_data()
 
-        # do not use tf.cast
-        train_data = np.asarray(train_data, dtype=np.float32)
-        train_labels = np.asarray(train_labels, dtype=np.int32)
-        test_data = np.asarray(test_data, dtype=np.float32)
-        test_labels = np.asarray(test_labels, dtype=np.int32)
+        # # do not use tf.cast
+        # train_data = np.asarray(train_data, dtype=np.float32)
+        # train_labels = np.asarray(train_labels, dtype=np.int32)
+        # test_data = np.asarray(test_data, dtype=np.float32)
+        # test_labels = np.asarray(test_labels, dtype=np.int32)
 
         print("test_data Shape after padding: {}".format(test_data.shape))
         print("train_data Shape after padding: {}".format(train_data.shape))
         tf.summary.image("input_train", train_data)
         tf.summary.image("input_test", test_data)
+
+        # # one-hot encoding for the labels
+        # train_labels = keras.utils.to_categorical(train_labels)
+        # test_labels = keras.utils.to_categorical(test_labels)
+        # train_data /= 255.0
+        # test_data /= 255.0
+
         return (train_data, train_labels), (test_data, test_labels)
 
     def execute_model(self, get_model, qn):
         # Get data
         with tf.device('/cpu:0'):
             (train_data, train_labels), (eval_data, eval_labels) = self.get_data()
-            # one-hot encoding for the labels
-            # train_labels = keras.utils.to_categorical(train_labels)
-            # eval_labels = keras.utils.to_categorical(eval_labels)
-            train_data /= 255.0
-            eval_data /= 255.0
 
         # Build model
         model = get_model(train_data[0].shape)
         model.summary()
 
-        # Compile model
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
-        # optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
-        model.compile(loss=keras.losses.categorical_crossentropy,
-                      optimizer=optimizer,
+        # # Compile model
+        # optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
+        # # optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
+        # model.compile(loss=keras.losses.sparse_categorical_crossentropy,
+        #               optimizer=optimizer,
+        #               metrics=['accuracy'])
+        model.compile(optimizer='adam',
+                      loss='sparse_categorical_crossentropy',
                       metrics=['accuracy'])
-
         # Train model
         if self.log_dir is not None:
             checkpoint_folder = self.log_dir + "/" + qn
@@ -82,13 +86,13 @@ class KerasCifar10:
         save_checkpoint = keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
         callbacks = [save_checkpoint]
 
-        history = model.fit(train_data, train_labels,
-                            batch_size=self.batch_size,
-                            epochs=self.epochs, initial_epoch=last_epoch_ran,
-                            verbose=1, shuffle=True,
-                            validation_split=self.validation_split,
-                            callbacks=callbacks)
-
+        # history = model.fit(train_data, train_labels,
+        #                     batch_size=self.batch_size,
+        #                     epochs=self.epochs, initial_epoch=last_epoch_ran,
+        #                     verbose=1, shuffle=True,
+        #                     validation_split=self.validation_split,
+        #                     callbacks=callbacks)
+        history = model.fit(train_data, train_labels, epochs=self.epochs)
         # Test model
         test_loss, test_acc = model.evaluate(eval_data, eval_labels, verbose=1)
 
