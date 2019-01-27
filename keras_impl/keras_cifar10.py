@@ -69,13 +69,24 @@ class KerasCifar10:
         else:
             checkpoint_folder = "./" + qn
 
+        initial_epoch = 0
+        latest_checkpoint_path = tf.train.latest_checkpoint(checkpoint_folder)
+        if latest_checkpoint_path is not None:
+            print("Restoring checkpoint from %s" % latest_checkpoint_path)
+            model.load_weights(latest_checkpoint_path)
+            end_i = "latest_checkpoint_path".find(".ckpt")
+            initial_epoch = latest_checkpoint_path[end_i-4:end_i]
+            print("Initial epoch: %s" % initial_epoch)
+
         checkpoint_path = checkpoint_folder + "/train-{epoch:04d}.ckpt"
         save_checkpoint = keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
         callbacks = [save_checkpoint]
 
+        model.load_weights(checkpoint_path)
+
         history = model.fit(train_data, train_labels,
                             batch_size=self.batch_size,
-                            epochs=self.epochs,
+                            epochs=self.epochs, initial_epoch=initial_epoch,
                             verbose=1, shuffle=True,
                             validation_split=self.validation_split,
                             callbacks=callbacks)
