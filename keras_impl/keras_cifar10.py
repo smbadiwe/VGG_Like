@@ -42,41 +42,46 @@ class KerasCifar10:
         tf.summary.image("input_test", test_data)
         return (train_data, train_labels), (test_data, test_labels)
 
-    def execute_model(self, get_model):
+    def execute_model(self, get_model, qn):
         # Get data
         with tf.device('/cpu:0'):
             (train_data, train_labels), (eval_data, eval_labels) = self.get_data()
-        # one-hot encoding for the labels
-        train_labels = keras.utils.to_categorical(train_labels)
-        eval_labels = keras.utils.to_categorical(eval_labels)
+            # one-hot encoding for the labels
+            train_labels = keras.utils.to_categorical(train_labels)
+            eval_labels = keras.utils.to_categorical(eval_labels)
+            train_data /= 255
+            eval_data /= 255
 
         # Build model
         model = get_model(train_data[0].shape)
         model.summary()
 
         # Compile model
-        # optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-        optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        # optimizer = keras.optimizers.SGD(lr=self.learning_rate)  # , decay=1e-6, momentum=0.9, nesterov=True)
         model.compile(loss=keras.losses.categorical_crossentropy,
                       optimizer=optimizer,
                       metrics=['accuracy'])
 
         # Train model
-        callbacks = [KerasLogger()]
         if self.log_dir is not None:
-            checkpoint_path = self.log_dir + "/train-{epoch:04d}.ckpt"
-            save_checkpoint = keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
-            callbacks.append(save_checkpoint)
+            checkpoint_folder = self.log_dir + "/" + qn
+        else:
+            checkpoint_folder = "./" + qn
+
+        checkpoint_path = checkpoint_folder + "/train-{epoch:04d}.ckpt"
+        save_checkpoint = keras.callbacks.ModelCheckpoint(checkpoint_path, save_weights_only=True, verbose=1)
+        callbacks = [save_checkpoint]
 
         history = model.fit(train_data, train_labels,
                             batch_size=self.batch_size,
                             epochs=self.epochs,
-                            verbose=1,
+                            verbose=1, shuffle=True,
                             validation_split=self.validation_split,
                             callbacks=callbacks)
 
         # Test model
-        test_loss, test_acc = model.evaluate(eval_data, eval_labels, checkpoint_path=self.log_dir)
+        test_loss, test_acc = model.evaluate(eval_data, eval_labels, verbose=1, checkpoint_path=checkpoint_folder)
 
         print("test_lost: {}. test_acc: {}".format(test_loss, test_acc))
 

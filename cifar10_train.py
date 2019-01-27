@@ -103,6 +103,12 @@ def train(model_fn, train_folder, qn_id):
             def __init__(self, last_step):
                 super().__init__(last_step=last_step)
 
+            def begin(self):
+                self._global_step_tensor = global_step
+
+            def before_run(self, run_context):  # pylint: disable=unused-argument
+                return tf.train.SessionRunArgs(global_step)
+
             def after_run(self, run_context, run_values):
                 gs = run_values.results + 1
                 print("\tgs = {}/{}".format(gs, self._last_step))

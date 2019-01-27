@@ -124,24 +124,24 @@ def plot_loss(epochs, history1, history2, history3):
     plt.legend(['Q1', 'Q2', 'Q3'], loc=0)
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig("./charts.png")
 
 
 def run():
     from keras_cifar10 import KerasCifar10
     import time
 
-    c = KerasCifar10(learning_rate=0.01, batch_size=2)
+    c = KerasCifar10(learning_rate=0.01, batch_size=128, log_dir="/.tensorflow/keras")
     start = time.time()
-    history1, test_loss1, test_acc1 = c.execute_model(problem_1)
+    history1, test_loss1, test_acc1 = c.execute_model(problem_1, "q1")
     end1 = time.time() - start
 
     start = time.time()
-    history2, test_loss2, test_acc2 = c.execute_model(problem_2)
+    history2, test_loss2, test_acc2 = c.execute_model(problem_2, "q2")
     end2 = time.time() - start
 
     start = time.time()
-    history3, test_loss3, test_acc3 = c.execute_model(problem_3)
+    history3, test_loss3, test_acc3 = c.execute_model(problem_3, "q3")
     end3 = time.time() - start
 
     print("Q1:\n\tTest Acc: {}. Test Loss: {}. Elapsed: {}min".format(test_acc1, test_loss1, end1 / 60))
