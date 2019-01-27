@@ -100,9 +100,6 @@ def train(model_fn, train_folder, qn_id):
                 return tf.train.SessionRunArgs(global_step)
 
             def after_run(self, run_context, run_values):
-                # if self._step % 100 == 0:
-                #     accuracy = run_context.session.run(accuracy_op)
-                #     tf.summary.scalar("accuracy", accuracy)
                 if self._step >= self._last_step:
                     run_context.request_stop()
         # class _StopAtHook(tf.train.StopAtStepHook):

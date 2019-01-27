@@ -268,9 +268,9 @@ def inference(images, qn2=False, qn3=False):
 
 
 def accuracy(logits, labels):
-    lg = tf.argmax(logits, 1)
-    print("accuracy - Shapes: logits: {}. labels: {}.".format(lg.shape, labels.shape))
-    acc, acc_op = tf.metrics.accuracy(predictions=lg, labels=labels)
+    # labels is not one-hot encoded. logits' shape is (batch_size, n_classes)
+    # while labels' is (batch_size,)
+    acc, acc_op = tf.metrics.accuracy(predictions=tf.argmax(logits, 1), labels=labels)
     return acc_op
 
 
