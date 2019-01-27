@@ -47,10 +47,10 @@ class KerasCifar10:
         with tf.device('/cpu:0'):
             (train_data, train_labels), (eval_data, eval_labels) = self.get_data()
             # one-hot encoding for the labels
-            train_labels = keras.utils.to_categorical(train_labels)
-            eval_labels = keras.utils.to_categorical(eval_labels)
-            train_data /= 255
-            eval_data /= 255
+            # train_labels = keras.utils.to_categorical(train_labels)
+            # eval_labels = keras.utils.to_categorical(eval_labels)
+            train_data /= 255.0
+            eval_data /= 255.0
 
         # Build model
         model = get_model(train_data[0].shape)

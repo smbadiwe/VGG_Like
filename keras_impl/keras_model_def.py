@@ -61,7 +61,7 @@ def build_model(input_layer_shape, qn2=False, qn3=False):
     # Dense Layers
     model.add(fc(200))
     model.add(fc(100))
-    model.add(keras.layers.Dense(10, activation=tf.nn.softmax, name="Softmax"))
+    model.add(keras.layers.Dense(10, activation=tf.nn.softmax, name="softmax"))
 
     return model
 
